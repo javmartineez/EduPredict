@@ -5,7 +5,6 @@ Predicción del éxito académico en educación superior.
 ## Estructura
 
 ```
-proyecto/
 ├── data/
 │   ├── rendimiento_estudiantes.csv      # dataset crudo (a colocar aquí)
 │   └── processed/                        # generado por el notebook 01
@@ -23,8 +22,8 @@ proyecto/
 
 ## Uso
 
-Los módulos de `src/` funcionan como librería: los notebooks de `notebooks/`
-los importan y orquestan las llamadas paso a paso.
+Los módulos de `src/` funcionan como una librería: los notebooks de `notebooks/`
+los importan y realizan las llamadas paso a paso.
 
 1. Colocar `rendimiento_estudiantes.csv` en `data/`.
 2. Ejecutar `notebooks/01_preprocesado.ipynb` — genera los CSVs limpios en
@@ -38,5 +37,5 @@ los importan y orquestan las llamadas paso a paso.
 ## Dependencias
 
 ```bash
-pip install pandas numpy scikit-learn matplotlib seaborn jupyter
+pip install pandas numpy scikit-learn matplotlib seaborn
 ```
