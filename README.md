@@ -37,5 +37,5 @@ los importan y realizan las llamadas paso a paso.
 ## Dependencias
 
 ```bash
-pip install pandas numpy scikit-learn matplotlib seaborn
+pip install pandas numpy scikit-learn matplotlib seaborn jupyter
 ```
