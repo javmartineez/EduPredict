@@ -164,7 +164,7 @@ def entrenar_modelos(modelos: dict, X_train: pd.DataFrame,
     resultados = {}
 
     for nombre, (pipeline, param_grid) in modelos.items():
-        print(f"\n{'='*60}\n  Entrenando: {nombre}\n{'='*60}")
+        print(f"\n{'-'*60}\n  Entrenando: {nombre}\n{'-'*60}")
         gs = GridSearchCV(
             estimator=pipeline,
             param_grid=param_grid,
