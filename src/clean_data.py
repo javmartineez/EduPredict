@@ -1,7 +1,7 @@
 """
 Módulo de limpieza y preprocesado del dataset de rendimiento de estudiantes.
 
-Pensado para usarse como librería desde el notebook `01_preprocesado.ipynb`.
+Pensado para usarse como librería desde el notebook '01_preprocesado.ipynb'.
 
 Pasos:
 1. Unificación de valores faltantes en variables categóricas.
@@ -89,11 +89,11 @@ def limpiar_vals_academicas(df: pd.DataFrame) -> pd.DataFrame:
 
     for sem in ['1sem', '2sem']:
         eval_col = f'asignaturas_{sem}_evaluadas'
-        mat_col  = f'asignaturas_{sem}_matriculadas'
+        # mat_col  = f'asignaturas_{sem}_matriculadas'
         apro_col = f'asignaturas_{sem}_aprobadas'
         conv_col = f'asignaturas_{sem}_convalidadas'
 
-        df[eval_col] = np.minimum(df[eval_col], df[mat_col])
+        # df[eval_col] = np.minimum(df[eval_col], df[mat_col])
         df[apro_col] = np.minimum(df[apro_col], df[eval_col])
         df[conv_col] = df[conv_col].clip(upper=8)
 
@@ -106,11 +106,11 @@ def limpiar_cualificacion_previa(df: pd.DataFrame) -> pd.DataFrame:
 
     La variable original contiene demasiadas etiquetas con muy pocas instancias.
     Se mapean a 5 grupos:
-      - 'superior'           : títulos universitarios y licenciaturas.
-      - 'tecnico'            : títulos técnicos y de especialización.
-      - 'basica'             : educación básica.
-      - 'secundaria'         : bachillerato y educación secundaria.
-      - 'otros_incompletos'  : resto (no clasificados o sin información).
+      - superior: títulos universitarios y licenciaturas.
+      - tecnico: títulos técnicos y de especialización.
+      - basica: educación básica.
+      - secundaria: bachillerato y educación secundaria.
+      - otros_incompletos: resto (no clasificados o sin información).
 
     Args:
         - df (pd.DataFrame): DataFrame original con la columna
@@ -124,9 +124,9 @@ def limpiar_cualificacion_previa(df: pd.DataFrame) -> pd.DataFrame:
     CATEGORIAS_FINALES = ['superior', 'tecnico', 'basica', 'secundaria']
 
     mapeo = {
-        'superior':   r'superior|licenciatura',
-        'tecnico':    r'tecnico|especializacion',
-        'basica':     r'basica',
+        'superior': r'superior|licenciatura',
+        'tecnico': r'tecnico|especializacion',
+        'basica': r'basica',
         'secundaria': r'secundaria'}
 
     for categoria, patron in mapeo.items():
@@ -142,11 +142,11 @@ def limpiar_modo_solicitud(df: pd.DataFrame) -> pd.DataFrame:
     """
     Agrupa las vías de acceso a la universidad en categorías principales.
 
-    - 'acceso_ordinario'    : 1ª y 2ª fase de la selectividad.
-    - 'movilidad_academica' : cambios de carrera y traslados de expediente.
-    - 'titulados_superior'  : alumnos que ya poseen un título previo.
-    - 'mayor_de_23_anos'    : vía de acceso para mayores de 23 años (alto volumen).
-    - 'otros'               : 3ª fase, contingentes especiales y el.
+    - acceso_ordinario: 1ª y 2ª fase de la selectividad.
+    - movilidad_academica: cambios de carrera y traslados de expediente.
+    - titulados_superior: alumnos que ya poseen un título previo.
+    - mayor_de_23_anos: vía de acceso para mayores de 23 años (alto volumen).
+    - otros: 3ª fase, contingentes especiales y el.
 
     Args:
         - df (pd.DataFrame): DataFrame original con la columna
@@ -163,7 +163,7 @@ def limpiar_modo_solicitud(df: pd.DataFrame) -> pd.DataFrame:
         'titulados_superior', 'mayor_de_23_anos'
     ]
     mapeo = {
-        'acceso_ordinario':    r'1a_fase|2a_fase',
+        'acceso_ordinario': r'1a_fase|2a_fase',
         'movilidad_academica': r'cambio|traslado',
         'titulados_superior':  r'titular_de',
     }
@@ -275,8 +275,12 @@ def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
     La variable objetivo es la nota media del 2º semestre.
       - Para evitar data leakage: se eliminan todas las variables del 2º semestre
         salvo el propio target, y también 'objetivo'.
-      - Para evitar sesgo por abandono: se excluyen los alumnos con nota 0.0 en 1sem
-        y 2sem.
+      - Para evitar sesgo por abandono: se excluyen los alumnos con nota 0.0 en
+        1sem y 2sem.
+      - Se descompone 'asignaturas_1sem_evaluadas' en dos variables:
+          · 'asignaturas_1sem_cursadas_normales': asignaturas matriculadas ese semestre.
+          · 'asignaturas_1sem_arrastradas': asignaturas de semestres anteriores que
+            el alumno está repitiendo (evaluadas - matriculadas, con mínimo 0).
 
     Args:
         - df: DataFrame limpio.
@@ -298,6 +302,14 @@ def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
         'objetivo']
     
     df_reg = df_reg.drop(columns=vars_leakage)
+
+    # Asignaturas "normales" del semestre (las que se matriculó ese cuatrimestre)
+    df_reg['asignaturas_1sem_cursadas_normales'] = df_reg['asignaturas_1sem_matriculadas']
+
+    # Asignaturas arrastradas de semestres anteriores
+    df_reg['asignaturas_1sem_arrastradas'] = (df_reg['asignaturas_1sem_evaluadas'] - df_reg['asignaturas_1sem_matriculadas']).clip(lower=0)
+
+    df_reg = df_reg.drop(columns=['asignaturas_1sem_evaluadas'])
 
     df_train, df_test = train_test_split(df_reg, test_size=test_size, random_state=random_state)
 

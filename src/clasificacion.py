@@ -122,7 +122,7 @@ def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
         ]),
         {
             "clf__C":        [0.01, 0.1, 1, 10],
-            "clf__l1_ratio": [0.0, 0.5, 1.0]   # 0=L2 puro, 1=L1 puro
+            "clf__l1_ratio": [0.0, 0.5, 1.0]   # 0=L2 , 0.5=ElasticNet, 1=L1, 
         })
 
     # Random Forest
@@ -216,31 +216,30 @@ def evaluar_en_test(
         y_pred = gs.predict(X_test)
         f1_mac = f1_score(y_test, y_pred, average="macro")
 
-        print(f"\n{'='*60}\n  {nombre}  |  F1 macro test = {f1_mac:.4f}\n{'='*60}")
+        print(f"\n{'-'*60}\n  {nombre}  |  F1 macro test = {f1_mac:.4f}\n{'-'*60}")
         print(classification_report(y_test, y_pred, target_names=nombres_clases))
 
         resumen.append({
-            "modelo":         nombre,
-            "f1_macro_cv":    gs.best_score_,
-            "f1_macro_test":  f1_mac,
+            "modelo": nombre,
+            "f1_macro_cv": gs.best_score_,
+            "f1_macro_test": f1_mac,
             "mejores_params": gs.best_params_})
 
         # Matriz de confusión
         cm = confusion_matrix(y_test, y_pred, labels=labels)
-        fig = plt.Figure(figsize=(6, 5))
-        ax = fig.add_subplot(1, 1, 1)
+        fig, ax = plt.subplots(figsize=(6, 5))
         ConfusionMatrixDisplay(cm, display_labels=nombres_clases).plot(
             ax=ax, cmap="Blues", values_format="d")
-        
         ax.set_title(f"Matriz de confusión — {nombre}")
         fig.tight_layout()
+        plt.close(fig)
         figs_cm[nombre] = fig
 
         if guardar_figs and path_prefix_cm is not None:
             fig.savefig(f"{path_prefix_cm}{nombre}.png", dpi=150)
 
     df_resumen = pd.DataFrame(resumen)
-    print(f"\n{'='*60}\n  RESUMEN COMPARATIVO\n{'='*60}")
+    print(f"\n{'-'*60}\n RESUMEN COMPARATIVO\n{'-'*60}")
     print(df_resumen.to_string(index=False))
 
     if path_resumen_csv is not None:
@@ -276,7 +275,7 @@ def importancia_variables(gs_rf: GridSearchCV, top_n: int = 15, path_fig: str = 
     idx = np.argsort(importances)[::-1][:top_n]
 
     df_importancias = pd.DataFrame({
-        "variable":    [all_features[i] for i in idx],
+        "variable": [all_features[i] for i in idx],
         "importancia": [importances[i]  for i in idx]})
 
     fig, ax = plt.subplots(figsize=(8, 5))

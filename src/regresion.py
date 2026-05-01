@@ -3,7 +3,6 @@ Tarea 2: Módulo de regresión de la calificación media del 2º semestre.
 
 Pensado para usarse como librería desde el notebook 03_regresion.ipynb.
 
-
 Modelos: Regresión Lineal Simple, Ridge, Lasso, ElasticNet,
          SVR (lineal y RBF), Random Forest.
 Selección de hiperparámetros: GridSearchCV con R² (cv=5 KFold).
@@ -25,7 +24,6 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 warnings.filterwarnings("ignore")
 
 TARGET = "nota_media_2sem"
-
 
 
 # 1. Carga de datos
@@ -185,12 +183,8 @@ def entrenar_modelos(modelos: dict, X_train: pd.DataFrame,
 
 # 5. Evaluación en test
 
-def evaluar_en_test(
-    resultados: dict,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    path_resumen_csv: str = None
-    ) -> pd.DataFrame:
+def evaluar_en_test(resultados: dict, X_test: pd.DataFrame, 
+                    y_test: pd.Series, path_resumen_csv: str = None) -> pd.DataFrame:
     """
     Evalúa cada modelo en el conjunto de test e imprime las métricas R², RMSE y MAE.
 
@@ -230,13 +224,7 @@ def evaluar_en_test(
 
 # 6. Diagnóstico gráfico
 
-def diagnostico_grafico(
-    nombre: str,
-    gs: GridSearchCV,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    path_fig: str = None,
-):
+def diagnostico_grafico(nombre: str, gs: GridSearchCV, X_test: pd.DataFrame, y_test: pd.Series, path_fig: str = None):
     """
     Genera dos gráficos de diagnóstico del modelo: predicho vs real y residuos vs predicho.
 
@@ -299,7 +287,7 @@ def coeficientes_lasso(gs_lasso: GridSearchCV, top_n: int = 15) -> pd.DataFrame:
 
     idx = np.argsort(np.abs(coefs))[::-1][:top_n]
     df = pd.DataFrame({
-        "variable":    [all_features[i] for i in idx],
+        "variable": [all_features[i] for i in idx],
         "coeficiente": [coefs[i] for i in idx]})
     
     df = df[df["coeficiente"] != 0].reset_index(drop=True)
@@ -329,7 +317,7 @@ def importancia_rf(gs_rf: GridSearchCV, top_n: int = 15, path_fig: str = None) -
     idx = np.argsort(importances)[::-1][:top_n]
 
     df = pd.DataFrame({
-        "variable":    [all_features[i] for i in idx],
+        "variable": [all_features[i] for i in idx],
         "importancia": [importances[i]  for i in idx]})
 
     fig, ax = plt.subplots(figsize=(8, 5))
