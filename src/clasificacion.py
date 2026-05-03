@@ -4,7 +4,6 @@ Tarea 1: Módulo de clasificación multiclase (Abandono / Matriculado / Graduado
 Pensado para usarse como librería desde el notebook 02_clasificacion.ipynb.
 
 Modelos incluidos: KNN, Regresión Logística (ElasticNet), Random Forest.
-Selección de hiperparámetros: GridSearchCV con F1 macro (cv=5 estratificado).
 """
 
 import os
@@ -49,7 +48,7 @@ def cargar_datos(path_train: str, path_test: str) -> tuple:
 
     train = pd.read_csv(path_train, sep=";")
     test  = pd.read_csv(path_test, sep=";")
-    train = train.sample(frac=1, random_state=42).reset_index(drop=True) #shuffle manual
+    train = train.sample(frac=1, random_state=0).reset_index(drop=True) #shuffle manual
 
     TARGET = "objetivo"
     X_train = train.drop(columns=[TARGET])
@@ -63,7 +62,7 @@ def cargar_datos(path_train: str, path_test: str) -> tuple:
 
 def construir_preprocesador(X: pd.DataFrame) -> ColumnTransformer:
     """
-    Construye un preprocesador que estandariaz las variables numéricas
+    Construye un preprocesador que estandarizar las variables numéricas
     y codifica (one-hot) las categóricas.
 
     Args:
@@ -117,7 +116,7 @@ def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
                 solver="saga",
                 max_iter=5000,
                 class_weight="balanced",
-                random_state=42,
+                random_state=0,
             )),
         ]),
         {

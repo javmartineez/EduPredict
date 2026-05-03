@@ -3,9 +3,7 @@ Tarea 2: Módulo de regresión de la calificación media del 2º semestre.
 
 Pensado para usarse como librería desde el notebook 03_regresion.ipynb.
 
-Modelos: Regresión Lineal Simple, Ridge, Lasso, ElasticNet,
-         SVR (lineal y RBF), Random Forest.
-Selección de hiperparámetros: GridSearchCV con R² (cv=5 KFold).
+Modelos: Regresión Lineal Simple, Ridge, Lasso, ElasticNet, SVR (lineal y RBF), Random Forest.
 """
 import warnings
 import numpy as np
@@ -20,8 +18,6 @@ from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-
-warnings.filterwarnings("ignore")
 
 TARGET = "nota_media_2sem"
 
@@ -164,18 +160,20 @@ def entrenar_modelos(modelos: dict, X_train: pd.DataFrame,
     """
     cv = KFold(n_splits=5, shuffle=True, random_state=0)
     resultados = {}
-    for nombre, (pipeline, param_grid) in modelos.items():
-        print(f"\n{'-'*60}\n  Entrenando: {nombre}\n{'-'*60}")
-        gs = GridSearchCV(
-            estimator=pipeline,
-            param_grid=param_grid,
-            scoring="r2",
-            cv=cv, n_jobs=-1, verbose=verbose, refit=True,
-        )
-        gs.fit(X_train, y_train)
-        print(f"Mejor R² (CV):   {gs.best_score_:.4f}")
-        print(f"Mejores params:  {gs.best_params_}")
-        resultados[nombre] = gs
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for nombre, (pipeline, param_grid) in modelos.items():
+            print(f"\n{'-'*60}\n  Entrenando: {nombre}\n{'-'*60}")
+            gs = GridSearchCV(
+                estimator=pipeline,
+                param_grid=param_grid,
+                scoring="r2",
+                cv=cv, n_jobs=-1, verbose=verbose, refit=True,
+            )
+            gs.fit(X_train, y_train)
+            print(f"Mejor R² (CV):   {gs.best_score_:.4f}")
+            print(f"Mejores params:  {gs.best_params_}")
+            resultados[nombre] = gs
 
     return resultados
 

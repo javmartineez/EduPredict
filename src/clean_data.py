@@ -6,11 +6,10 @@ Pensado para usarse como librería desde el notebook '01_preprocesado.ipynb'.
 Pasos:
 1. Unificación de valores faltantes en variables categóricas.
 2. Codificación de la variable objetivo a enteros (necesario para KNN).
-3. Corrección de inconsistencias en variables académicas (semestres).
-4. Reducción de cardinalidad en cualificación previa y modo de solicitud.
-5. Eliminación de la variable 'nacionalidad' (redundante teniendo 'internacional').
-6. Agrupación por frecuencia en ocupación/cualificación de los padres.
-7. Generación de datasets para clasificación y regresión (split 80/20).
+3. Reducción de cardinalidad en cualificación previa y modo de solicitud.
+4. Eliminación de la variable 'nacionalidad' (redundante teniendo 'internacional').
+5. Agrupación por frecuencia en ocupación/cualificación de los padres.
+6. Generación de datasets para clasificación y regresión (split 80/20).
 """
 
 import os
@@ -65,39 +64,41 @@ def codificar_objetivo(df: pd.DataFrame, target_col: str = 'objetivo') -> pd.Dat
     return df
 
 
-def limpiar_vals_academicas(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Corrige inconsistencias lógicas en las variables de rendimiento académico.
+# TRAS COMPROBAR SE DECIDE NO EMPLEAR ESTA FUNCIÓN PERO SE DEJA POR SI FUERA NECESARIA 
 
-    - Filas con más de 20 asignaturas evaluadas en un semestre.
-    - Asignaturas evaluadas > matriculadas: se capa al valor de matriculadas.
-    - Asignaturas aprobadas > evaluadas: se capa al valor evaluadas.
-    - Asignaturas convalidadas > 8: se recorta a 8.
+# def limpiar_vals_academicas(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Corrige inconsistencias lógicas en las variables de rendimiento académico.
 
-    Args:
-        - df (pd.DataFrame): DataFrame original con inconsistencias
-                             en variables académicas.
+#     - Filas con más de 20 asignaturas evaluadas en un semestre.
+#     - Asignaturas evaluadas > matriculadas: se capa al valor de matriculadas.
+#     - Asignaturas aprobadas > evaluadas: se capa al valor evaluadas.
+#     - Asignaturas convalidadas > 8: se recorta a 8.
 
-    Returns
-        - pd.DataFrame: DataFrame sin las inconsistencias anteriores.
-    """
-    mask_outlier = (
-        (df['asignaturas_1sem_evaluadas'] > 20) |
-        (df['asignaturas_2sem_evaluadas'] > 20))
+#     Args:
+#         - df (pd.DataFrame): DataFrame original con inconsistencias
+#                              en variables académicas.
+
+#     Returns
+#         - pd.DataFrame: DataFrame sin las inconsistencias anteriores.
+#     """
+#     mask_outlier = (
+#         (df['asignaturas_1sem_evaluadas'] > 30) |
+#         (df['asignaturas_2sem_evaluadas'] > 30))
     
-    df = df[~mask_outlier].copy()
+#     df = df[~mask_outlier].copy()
 
-    for sem in ['1sem', '2sem']:
-        eval_col = f'asignaturas_{sem}_evaluadas'
-        # mat_col  = f'asignaturas_{sem}_matriculadas'
-        apro_col = f'asignaturas_{sem}_aprobadas'
-        conv_col = f'asignaturas_{sem}_convalidadas'
+#     for sem in ['1sem', '2sem']:
+#         eval_col = f'asignaturas_{sem}_evaluadas'
+#         mat_col  = f'asignaturas_{sem}_matriculadas'
+#         apro_col = f'asignaturas_{sem}_aprobadas'
+#         conv_col = f'asignaturas_{sem}_convalidadas'
 
-        # df[eval_col] = np.minimum(df[eval_col], df[mat_col])
-        df[apro_col] = np.minimum(df[apro_col], df[eval_col])
-        df[conv_col] = df[conv_col].clip(upper=8)
+#         df[eval_col] = np.minimum(df[eval_col], df[mat_col])
+#         df[apro_col] = np.minimum(df[apro_col], df[eval_col])
+#         df[conv_col] = df[conv_col].clip(upper=15)
 
-    return df
+#     return df
 
 
 def limpiar_cualificacion_previa(df: pd.DataFrame) -> pd.DataFrame:
@@ -146,7 +147,7 @@ def limpiar_modo_solicitud(df: pd.DataFrame) -> pd.DataFrame:
     - movilidad_academica: cambios de carrera y traslados de expediente.
     - titulados_superior: alumnos que ya poseen un título previo.
     - mayor_de_23_anos: vía de acceso para mayores de 23 años (alto volumen).
-    - otros: 3ª fase, contingentes especiales y el.
+    - otros
 
     Args:
         - df (pd.DataFrame): DataFrame original con la columna
@@ -219,7 +220,7 @@ def limpiar_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = unificar_nulls(df)
     df = codificar_objetivo(df)
-    df = limpiar_vals_academicas(df)
+    # df = limpiar_vals_academicas(df)
     df = limpiar_cualificacion_previa(df)
     df = limpiar_modo_solicitud(df)
     df = df.drop(columns=['nacionalidad'])
@@ -277,10 +278,6 @@ def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
         salvo el propio target, y también 'objetivo'.
       - Para evitar sesgo por abandono: se excluyen los alumnos con nota 0.0 en
         1sem y 2sem.
-      - Se descompone 'asignaturas_1sem_evaluadas' en dos variables:
-          · 'asignaturas_1sem_cursadas_normales': asignaturas matriculadas ese semestre.
-          · 'asignaturas_1sem_arrastradas': asignaturas de semestres anteriores que
-            el alumno está repitiendo (evaluadas - matriculadas, con mínimo 0).
 
     Args:
         - df: DataFrame limpio.
@@ -302,14 +299,6 @@ def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
         'objetivo']
     
     df_reg = df_reg.drop(columns=vars_leakage)
-
-    # Asignaturas "normales" del semestre (las que se matriculó ese cuatrimestre)
-    df_reg['asignaturas_1sem_cursadas_normales'] = df_reg['asignaturas_1sem_matriculadas']
-
-    # Asignaturas arrastradas de semestres anteriores
-    df_reg['asignaturas_1sem_arrastradas'] = (df_reg['asignaturas_1sem_evaluadas'] - df_reg['asignaturas_1sem_matriculadas']).clip(lower=0)
-
-    df_reg = df_reg.drop(columns=['asignaturas_1sem_evaluadas'])
 
     df_train, df_test = train_test_split(df_reg, test_size=test_size, random_state=random_state)
 

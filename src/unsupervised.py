@@ -369,3 +369,69 @@ def perfilar_clusters( df: pd.DataFrame, labels: np.ndarray,
         "medias_num": medias_num,
         "modas_cat": modas_cat,
         "cluster_x_objetivo": cont}
+
+
+
+def evaluar_estabilidad_bootstrap(
+    X: np.ndarray,
+    metodo: str,
+    k: int,
+    n_iter: int = 20,
+    sample_frac: float = 0.8,
+    random_state: int = 0,
+) -> dict[str, float]:
+    """
+    Evalúa la estabilidad del clustering por bootstrap subsample.
+
+    Procedimiento:
+      Para cada iteración i:
+        1. Submuestrear el `sample_frac` del dataset.
+        2. Reajustar el clustering jerárquico con el mismo método y k.
+        3. Comparar con el clustering original sobre la intersección de
+           observaciones, usando el Adjusted Rand Index (ARI).
+
+    Un ARI medio cercano a 1 indica clusters muy estables; cercano a 0,
+    aleatorios.
+
+    Args:
+        - X (np.ndarray): matriz de features.
+        - metodo (str): linkage a usar.
+        - k (int): nº de clusters.
+        - n_iter (int): nº de iteraciones bootstrap.
+        - sample_frac (float): fracción a submuestrear en cada iteración.
+        - random_state (int): semilla.
+
+    Returns:
+        - resultados (dict[str, float]): {'ari_medio', 'ari_std', 'n_iter'}.
+    """
+    from sklearn.metrics import adjusted_rand_score
+
+    rng = np.random.default_rng(random_state)
+    n = X.shape[0]
+
+    # Clustering de referencia con todo X
+    if metodo == "ward":
+        Z_ref = linkage(X, method="ward")
+    else:
+        Z_ref = linkage(pdist(X, metric="euclidean"), method=metodo)
+    labels_ref = fcluster(Z_ref, t=k, criterion="maxclust")
+
+    aris = []
+    n_sub = int(n * sample_frac)
+    for _ in range(n_iter):
+        idx = rng.choice(n, size=n_sub, replace=False)
+        X_sub = X[idx]
+
+        if metodo == "ward":
+            Z_sub = linkage(X_sub, method="ward")
+        else:
+            Z_sub = linkage(pdist(X_sub, metric="euclidean"), method=metodo)
+        labels_sub = fcluster(Z_sub, t=k, criterion="maxclust")
+
+        ari = adjusted_rand_score(labels_ref[idx], labels_sub)
+        aris.append(ari)
+
+    return {
+        "ari_medio": float(np.mean(aris)),
+        "ari_std": float(np.std(aris)),
+        "n_iter": n_iter}
