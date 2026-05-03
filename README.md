@@ -47,52 +47,16 @@ proyecto_ML/
 │   ├── predicciones_clasificacion.csv
 │   └── predicciones_regresion.csv
 ├── informe.pdf                             (memoria final, formato NeurIPS)
-├── requirements.txt                        (dependencias Python)
 └── README.md                               (este fichero)
 ```
 
-La separación módulo / notebook es intencional: en `src/` está la lógica
-reutilizable (funciones puras, documentadas) y en `notebooks/` están las
-llamadas a esas funciones, con visualizaciones y comentarios. Cualquier
-cambio metodológico se hace en `src/`; los notebooks son la "interfaz" de
-ejecución y de lectura.
+La separación de los ficheros se basa en: en `src/` está la lógica
+reutilizable y en `notebooks/` están las
+llamadas a esas funciones, con visualizaciones y comentarios.
 
 ---
 
-## 2. Requisitos y entorno
-
-### Versión de Python
-
-Probado con **Python 3.10–3.12**. Versiones anteriores no garantizadas (uso de
-sintaxis `dict[str, int]` y `list[str]` sin `from __future__ import annotations`).
-
-### Instalación de dependencias
-
-Recomendado usar un entorno virtual:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate          # Linux/macOS
-.venv\Scripts\activate             # Windows
-pip install -r requirements.txt
-```
-
-Contenido de `requirements.txt`:
-
-```
-numpy>=1.24
-pandas>=2.0
-scikit-learn>=1.3
-scipy>=1.10
-matplotlib>=3.7
-seaborn>=0.12
-jupyter>=1.0
-notebook>=7.0
-```
-
----
-
-## 3. Reproducción de los resultados
+## 2. Reproducción de los resultados
 
 ### Orden de ejecución
 
@@ -127,9 +91,9 @@ Abrir cada notebook y ejecutar **Run All** (`Cell > Run All` en Jupyter,
 | Notebook | Tiempo (8 cores) |
 |---|---|
 | `01_preprocesado.ipynb` | < 1 min |
-| `02_clasificacion.ipynb` | 5–10 min (dominado por el grid de Random Forest) |
-| `03_regresion.ipynb` | 8–15 min (dominado por SVR-RBF y Random Forest) |
-| `04_unsupervised.ipynb` | 2–5 min (dominado por el cálculo de linkages O(N²)) |
+| `02_clasificacion.ipynb` | 1-3 min (dominado por el grid de Random Forest) |
+| `03_regresion.ipynb` | 2-4 min (dominado por SVR-RBF y Random Forest) |
+| `04_unsupervised.ipynb` | 1 min (dominado por el cálculo de linkages O(N²)) |
 
 ---
 
@@ -139,15 +103,6 @@ Tanto los `RandomForest*` como los `GridSearchCV` están configurados con
 `n_jobs=-1`, lo que indica a scikit-learn que **use todos los núcleos disponibles**.
 Este valor por defecto es óptimo en máquinas con 4 o más núcleos, pero puede
 generar problemas en equipos con menos núcleos o poca RAM:
-
-- **Saturación de la máquina**: el grid de RF entrena hasta `n_estimators=500`
-  con todos los núcleos en paralelo, lo que satura la CPU y puede congelar el
-  sistema en máquinas modestas.
-- **Problemas de memoria**: cada job replica una copia del dataset preprocesado
-  en memoria. Con grids grandes esto puede agotar la RAM en equipos con menos de 8 GB.
-- **Conflicto entre `n_jobs` anidados**: tanto `GridSearchCV` como
-  `RandomForest` tienen `n_jobs=-1`. scikit-learn lo gestiona internamente,
-  pero a veces puede provocar contención de hilos.
 
 ### Cómo modificarlo si tu máquina tiene pocos núcleos
 
@@ -177,9 +132,6 @@ en las funciones `definir_modelos_y_grids` de cada módulo. Por ejemplo, en RF:
 "clf__min_samples_leaf": [3]
 ```
 
-Esto reduce el tiempo de entrenamiento en aproximadamente un orden de
-magnitud, a costa de no explorar la totalidad del espacio de hiperparámetros.
-
 ---
 
 ## 5. Reproducibilidad
@@ -188,11 +140,9 @@ Todas las semillas aleatorias están fijadas:
 
 - `random_state=0` en `RandomForest`, `Ridge`, `Lasso`, `ElasticNet`,
   `LogisticRegression`, `KFold` y `StratifiedKFold`.
-- `random_state=42` en el `train_test_split` de clasificación.
+- `random_state=0` en el `train_test_split` de clasificación.
 - `random_state=0` en el `train_test_split` de regresión.
 
-Ejecutar el proyecto desde cero produce los mismos números reportados
-en `results/resumen_*.csv` y en el informe.
 
 > **Nota sobre `LokyWorker` warnings**: en algunos entornos (particularmente
 > Windows + `n_jobs=-1`) puede aparecer un mensaje sobre el número de
@@ -244,8 +194,6 @@ heatmaps, scatter PCA) se renderizan dentro del notebook.
   etc., todo se discute en `informe.pdf`.
 
 ---
-
-## 8. Contacto
 
 Cualquier duda sobre la reproducibilidad puede consultarse abriendo los
 notebooks en orden, ya que cada uno contiene comentarios explicando paso
