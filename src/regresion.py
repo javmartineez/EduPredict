@@ -1,9 +1,9 @@
 """
-Tarea 2: Módulo de regresión de la calificación media del 2º semestre.
+Task 2: Regression module for the 2nd-semester average grade.
 
-Pensado para usarse como librería desde el notebook 03_regresion.ipynb.
+Designed to be used as a library from the 03_regresion.ipynb notebook.
 
-Modelos: Regresión Lineal Simple, Ridge, Lasso, ElasticNet, SVR (lineal y RBF), Random Forest.
+Models: Simple Linear Regression, Ridge, Lasso, ElasticNet, SVR (linear and RBF), Random Forest.
 """
 import warnings
 import numpy as np
@@ -22,35 +22,35 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 TARGET = "nota_media_2sem"
 
 
-# 1. Carga de datos
+# 1. Data loading
 
 def cargar_datos(path_train: str, path_test: str) -> tuple:
     """
-    Lee los CSVs de entrenamiento y test, aplica un shuffle y separa features del target.
-    Aborta si detecta variables del segundo semestre distintas del target (anti data-leakage).
+    Reads the training and test CSVs, shuffles them and splits features from the target.
+    Aborts if it finds second-semester variables other than the target (anti data leakage).
 
     Args:
-        - path_train (str): ruta al CSV de entrenamiento
-        - path_test (str): ruta al CSV de test
+        - path_train (str): path to the training CSV
+        - path_test (str): path to the test CSV
 
     Returns:
-        - X_train (pd.DataFrame): features de entrenamiento
-        - y_train (pd.Series): etiquetas de entrenamiento
-        - X_test (pd.DataFrame): features de test
-        - y_test (pd.Series): etiquetas de test
+        - X_train (pd.DataFrame): training features
+        - y_train (pd.Series): training targets
+        - X_test (pd.DataFrame): test features
+        - y_test (pd.Series): test targets
     """
     train = pd.read_csv(path_train, sep=";")
     test  = pd.read_csv(path_test, sep=";")
-    train = train.sample(frac=1, random_state=0).reset_index(drop=True) #shuffle manual
+    train = train.sample(frac=1, random_state=0).reset_index(drop=True) #manual shuffle
 
     if TARGET not in train.columns:
-        raise ValueError(f"No se encuentra el target '{TARGET}' en el train.")
+        raise ValueError(f"Target '{TARGET}' not found in the training set.")
 
     leak_cols = [c for c in train.columns if "2sem" in c.lower() and c != TARGET]
     if leak_cols:
         raise ValueError(
-            "DATA LEAKAGE detectado. Estas variables del 2º semestre deben" 
-            f"eliminarse antes de modelar:\n {leak_cols}")
+            "DATA LEAKAGE detected. These 2nd-semester variables must be"
+            f" removed before modelling:\n {leak_cols}")
 
     X_train = train.drop(columns=[TARGET])
     y_train = train[TARGET]
@@ -60,17 +60,17 @@ def cargar_datos(path_train: str, path_test: str) -> tuple:
 
 
 
-# 2. Preprocesador
+# 2. Preprocessor
 
 def construir_preprocesador(X: pd.DataFrame) -> ColumnTransformer:
     """
-    Construye un preprocesador que estandariza las variables numéricas y codifica las categóricas.
+    Builds a preprocessor that standardises the numerical variables and encodes the categorical ones.
 
     Args:
-        - X (pd.DataFrame): DataFrame con las features de entrenamiento
+        - X (pd.DataFrame): DataFrame with the training features
 
     Returns:
-        - preprocesador (ColumnTransformer): transformador listo para usar en un Pipeline
+        - preprocesador (ColumnTransformer): transformer ready to be used in a Pipeline
     """
     cols_num = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
     cols_cat = X.select_dtypes(include=["object", "category"]).columns.tolist()
@@ -82,17 +82,17 @@ def construir_preprocesador(X: pd.DataFrame) -> ColumnTransformer:
 
 
 
-# 3. Modelos y grids
+# 3. Models and grids
 
 def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
     """
-    Define los modelos de regresión y sus grids de hiperparámetros para GridSearchCV.
+    Defines the regression models and their hyperparameter grids for GridSearchCV.
 
     Args:
-        - preprocesador (ColumnTransformer): preprocesador a incluir en cada Pipeline
+        - preprocesador (ColumnTransformer): preprocessor to include in each Pipeline
 
     Returns:
-        - modelos (dict): diccionario con formato {nombre: (pipeline, param_grid)}
+        - modelos (dict): dictionary in the format {name: (pipeline, param_grid)}
     """
     modelos = {}
 
@@ -141,29 +141,29 @@ def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
 
 
 
-# 4. Entrenamiento con CV
+# 4. Training with CV
 
 def entrenar_modelos(modelos: dict, X_train: pd.DataFrame, 
                      y_train: pd.Series, verbose: int = 1) -> dict:
     """
-    Entrena cada modelo usando GridSearchCV con validación cruzada KFold.
+    Trains each model using GridSearchCV with KFold cross-validation.
 
     Args:
-        - modelos (dict): diccionario con formato {nombre: (pipeline, param_grid)}
-        - X_train (pd.DataFrame): features de entrenamiento
-        - y_train (pd.Series): valores del target de entrenamiento
-        - verbose (int): grado de información que devuelve sklearn durante el 
-                         entrenamiento
+        - modelos (dict): dictionary in the format {name: (pipeline, param_grid)}
+        - X_train (pd.DataFrame): training features
+        - y_train (pd.Series): training target values
+        - verbose (int): verbosity level of sklearn during
+                         training
 
     Returns:
-        - resultados (dict): diccionario con formato {nombre: GridSearchCV ajustado}
+        - resultados (dict): dictionary in the format {name: fitted GridSearchCV}
     """
     cv = KFold(n_splits=5, shuffle=True, random_state=0)
     resultados = {}
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for nombre, (pipeline, param_grid) in modelos.items():
-            print(f"\n{'-'*60}\n  Entrenando: {nombre}\n{'-'*60}")
+            print(f"\n{'-'*60}\n  Training: {nombre}\n{'-'*60}")
             gs = GridSearchCV(
                 estimator=pipeline,
                 param_grid=param_grid,
@@ -171,28 +171,28 @@ def entrenar_modelos(modelos: dict, X_train: pd.DataFrame,
                 cv=cv, n_jobs=-1, verbose=verbose, refit=True,
             )
             gs.fit(X_train, y_train)
-            print(f"Mejor R² (CV):   {gs.best_score_:.4f}")
-            print(f"Mejores params:  {gs.best_params_}")
+            print(f"Best R² (CV):   {gs.best_score_:.4f}")
+            print(f"Best params:    {gs.best_params_}")
             resultados[nombre] = gs
 
     return resultados
 
 
 
-# 5. Evaluación en test
+# 5. Test evaluation
 
 def evaluar_en_test(resultados: dict, X_test: pd.DataFrame, 
                     y_test: pd.Series, path_resumen_csv: str = None) -> pd.DataFrame:
     """
-    Evalúa cada modelo en el conjunto de test e imprime las métricas R², RMSE y MAE.
+    Evaluates each model on the test set and prints the R², RMSE and MAE metrics.
 
     Args:
-        - resultados (dict): diccionario con formato {nombre: GridSearchCV ajustado}
-        - X_test (pd.DataFrame): features de test
-        - y_test (pd.Series): valores reales del target en test
+        - resultados (dict): dictionary in the format {name: fitted GridSearchCV}
+        - X_test (pd.DataFrame): test features
+        - y_test (pd.Series): actual target values in test
 
     Returns:
-        - df (pd.DataFrame): tabla comparativa con R², RMSE y MAE para cada modelo, ordenada por R² test
+        - df (pd.DataFrame): comparison table with R², RMSE and MAE for each model, sorted by test R²
     """
     resumen = []
     for nombre, gs in resultados.items():
@@ -210,7 +210,7 @@ def evaluar_en_test(resultados: dict, X_test: pd.DataFrame,
             "mejores_params": gs.best_params_})
 
     df = pd.DataFrame(resumen).sort_values("r2_test", ascending=False).reset_index(drop=True)
-    print(f"\n{'-'*60}\n  RESUMEN COMPARATIVO (ordenado por R² en test)\n{'-'*60}")
+    print(f"\n{'-'*60}\n  COMPARATIVE SUMMARY (sorted by test R²)\n{'-'*60}")
     print(df.to_string(index=False))
 
     if path_resumen_csv is not None:
@@ -220,17 +220,17 @@ def evaluar_en_test(resultados: dict, X_test: pd.DataFrame,
 
 
 
-# 6. Diagnóstico gráfico
+# 6. Graphical diagnostics
 
 def diagnostico_grafico(nombre: str, gs: GridSearchCV, X_test: pd.DataFrame, y_test: pd.Series, path_fig: str = None):
     """
-    Genera dos gráficos de diagnóstico del modelo: predicho vs real y residuos vs predicho.
+    Generates two diagnostic plots for the model: predicted vs actual and residuals vs predicted.
 
     Args:
-        - nombre (str): nombre del modelo, usado en los títulos y en el nombre del fichero guardado
-        - gs (GridSearchCV): GridSearchCV ajustado con el mejor modelo
-        - X_test (pd.DataFrame): features de test
-        - y_test (pd.Series): valores reales del target en test
+        - nombre (str): model name, used in the titles and in the saved file name
+        - gs (GridSearchCV): GridSearchCV fitted with the best model
+        - X_test (pd.DataFrame): test features
+        - y_test (pd.Series): actual target values in test
     """
 
     y_pred = gs.predict(X_test)
@@ -238,21 +238,21 @@ def diagnostico_grafico(nombre: str, gs: GridSearchCV, X_test: pd.DataFrame, y_t
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-    # Predicho vs real
+    # Predicted vs actual
     axes[0].scatter(y_test, y_pred, alpha=0.4, s=15, color="steelblue")
     lims = [min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())]
-    axes[0].plot(lims, lims, "r--", lw=1, label="Predicción perfecta")
-    axes[0].set_xlabel("Nota real")
-    axes[0].set_ylabel("Nota predicha")
-    axes[0].set_title(f"Predicho vs Real — {nombre}")
+    axes[0].plot(lims, lims, "r--", lw=1, label="Perfect prediction")
+    axes[0].set_xlabel("Actual grade")
+    axes[0].set_ylabel("Predicted grade")
+    axes[0].set_title(f"Predicted vs Actual — {nombre}")
     axes[0].legend()
 
-    # Residuos vs predicho
+    # Residuals vs predicted
     axes[1].scatter(y_pred, residuos, alpha=0.4, s=15, color="darkorange")
     axes[1].axhline(0, color="red", lw=1, ls="--")
-    axes[1].set_xlabel("Nota predicha")
-    axes[1].set_ylabel("Residuo (real − predicho)")
-    axes[1].set_title(f"Residuos — {nombre}")
+    axes[1].set_xlabel("Predicted grade")
+    axes[1].set_ylabel("Residual (actual − predicted)")
+    axes[1].set_title(f"Residuals — {nombre}")
 
     fig.tight_layout()
     if path_fig is not None:
@@ -261,15 +261,15 @@ def diagnostico_grafico(nombre: str, gs: GridSearchCV, X_test: pd.DataFrame, y_t
 
 
 
-# 7. Coeficientes de Lasso
+# 7. Lasso coefficients
 
 def coeficientes_lasso(gs_lasso: GridSearchCV, top_n: int = 15) -> pd.DataFrame:
     """
-    Muestra los coeficientes más relevantes del modelo Lasso, es decir, los que no han sido eliminados.
+    Shows the most relevant coefficients of the Lasso model, i.e. those that have not been zeroed out.
 
     Args:
-        - gs_lasso (GridSearchCV): GridSearchCV que contiene el mejor modelo Lasso
-        - top_n (int): número máximo de coeficientes a mostrar (por defecto 15)
+        - gs_lasso (GridSearchCV): GridSearchCV containing the best Lasso model
+        - top_n (int): maximum number of coefficients to show (default 15)
     """
     pipe = gs_lasso.best_estimator_
     prep = pipe.named_steps["prep"]
@@ -281,7 +281,7 @@ def coeficientes_lasso(gs_lasso: GridSearchCV, top_n: int = 15) -> pd.DataFrame:
     coefs = pipe.named_steps["reg"].coef_
     n_nonzero = int(np.sum(coefs != 0))
 
-    print(f"\n  Lasso: {n_nonzero} / {len(coefs)} variables con coef != 0")
+    print(f"\n  Lasso: {n_nonzero} / {len(coefs)} variables with coef != 0")
 
     idx = np.argsort(np.abs(coefs))[::-1][:top_n]
     df = pd.DataFrame({
@@ -293,16 +293,16 @@ def coeficientes_lasso(gs_lasso: GridSearchCV, top_n: int = 15) -> pd.DataFrame:
 
 
 
-# 8. Importancia de variables (Random Forest)
+# 8. Feature importance (Random Forest)
 
 def importancia_rf(gs_rf: GridSearchCV, top_n: int = 15, path_fig: str = None) -> tuple:
     """
-    Muestra e imprime las variables más importantes según el modelo Random 
-    Forest Regressor.
+    Shows and prints the most important variables according to the Random
+    Forest Regressor model.
 
     Args:
-        - gs_rf (GridSearchCV): GridSearchCV que contiene el mejor modelo RF
-        - top_n (int): número de variables a mostrar (por defecto 15)
+        - gs_rf (GridSearchCV): GridSearchCV containing the best RF model
+        - top_n (int): number of variables to show (default 15)
     """
     pipe = gs_rf.best_estimator_
     prep = pipe.named_steps["prep"]
@@ -320,7 +320,7 @@ def importancia_rf(gs_rf: GridSearchCV, top_n: int = 15, path_fig: str = None) -
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh(df["variable"][::-1], df["importancia"][::-1], color="steelblue")
-    ax.set_xlabel("Importancia (reducción de varianza)")
+    ax.set_xlabel("Importance (variance reduction)")
     ax.set_title(f"Top {top_n} feature importances — Random Forest Regressor")
     fig.tight_layout()
 

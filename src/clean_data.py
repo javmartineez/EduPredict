@@ -1,15 +1,15 @@
 """
-Módulo de limpieza y preprocesado del dataset de rendimiento de estudiantes.
+Cleaning and preprocessing module for the student performance dataset.
 
-Pensado para usarse como librería desde el notebook '01_preprocesado.ipynb'.
+Designed to be used as a library from the '01_preprocesado.ipynb' notebook.
 
-Pasos:
-1. Unificación de valores faltantes en variables categóricas.
-2. Codificación de la variable objetivo a enteros (necesario para KNN).
-3. Reducción de cardinalidad en cualificación previa y modo de solicitud.
-4. Eliminación de la variable 'nacionalidad' (redundante teniendo 'internacional').
-5. Agrupación por frecuencia en ocupación/cualificación de los padres.
-6. Generación de datasets para clasificación y regresión (split 80/20).
+Steps:
+1. Unify missing values in categorical variables.
+2. Encode the target variable as integers (required for KNN).
+3. Reduce cardinality of prior qualification and application mode.
+4. Drop the 'nacionalidad' (nationality) variable (redundant given 'internacional').
+5. Frequency-based grouping of the parents' occupation/qualification.
+6. Generate the classification and regression datasets (80/20 split).
 """
 
 import os
@@ -22,22 +22,22 @@ MAPEO_OBJETIVO = {"abandono": 0, "matriculado": 1, "graduado": 2}
 
 
 
-# Limpieza general
+# General cleaning
 
 def unificar_nulls(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agrupa los valores que indican falta de información.
+    Groups the values that indicate missing information.
 
-    Algunos valores categóricos del dataset codifican la ausencia del dato con
-    etiquetas diferentes ('desconocido', 'en_blanco', 'otra_situacion').
-    Esta función las unifica bajo una única etiqueta.
+    Some categorical values in the dataset encode missing data with different
+    labels ('desconocido', 'en_blanco', 'otra_situacion').
+    This function unifies them under a single label.
 
     Args:
-        - df (pd.DataFrame): DataFrame original con posibles valores nulos 
-                             heterogéneos.
+        - df (pd.DataFrame): original DataFrame with possibly heterogeneous
+                             null values.
 
     Returns
-        - pd.DataFrame: DataFrame con valores nulos unificados en 
+        - pd.DataFrame: DataFrame with null values unified as
                         'informacion_no_disponible'.
     """
 
@@ -48,44 +48,44 @@ def unificar_nulls(df: pd.DataFrame) -> pd.DataFrame:
 
 def codificar_objetivo(df: pd.DataFrame, target_col: str = 'objetivo') -> pd.DataFrame:
     """
-    Codifica la variable objetivo categórica en enteros.
+    Encodes the categorical target variable as integers.
 
-    Mapeo: abandono -> 0, matriculado -> 1, graduado -> 2.
-    Necesario para evitar errores al entrenar KNN.
+    Mapping: abandono (dropout) -> 0, matriculado (enrolled) -> 1, graduado (graduate) -> 2.
+    Required to avoid errors when training KNN.
 
     Args:
         - df (pd.DataFrame)
 
     Returns
-        - pd.DataFrame: DataFrame con la variable objetivo codificada a enteros
+        - pd.DataFrame: DataFrame with the target variable encoded as integers
     """
     df = df.copy()
     df[target_col] = df[target_col].map(MAPEO_OBJETIVO)
     return df
 
 
-# TRAS COMPROBAR SE DECIDE NO EMPLEAR ESTA FUNCIÓN PERO SE DEJA POR SI FUERA NECESARIA 
+# AFTER TESTING IT WAS DECIDED NOT TO USE THIS FUNCTION, BUT IT IS KEPT IN CASE IT IS NEEDED
 
 # def limpiar_vals_academicas(df: pd.DataFrame) -> pd.DataFrame:
 #     """
-#     Corrige inconsistencias lógicas en las variables de rendimiento académico.
+#     Fixes logical inconsistencies in the academic performance variables.
 
-#     - Filas con más de 20 asignaturas evaluadas en un semestre.
-#     - Asignaturas evaluadas > matriculadas: se capa al valor de matriculadas.
-#     - Asignaturas aprobadas > evaluadas: se capa al valor evaluadas.
-#     - Asignaturas convalidadas > 8: se recorta a 8.
+#     - Rows with more than 20 evaluated subjects in a semester.
+#     - Evaluated subjects > enrolled: capped to the enrolled value.
+#     - Passed subjects > evaluated: capped to the evaluated value.
+#     - Credited subjects > 8: clipped to 8.
 
 #     Args:
-#         - df (pd.DataFrame): DataFrame original con inconsistencias
-#                              en variables académicas.
+#         - df (pd.DataFrame): original DataFrame with inconsistencies
+#                              in the academic variables.
 
 #     Returns
-#         - pd.DataFrame: DataFrame sin las inconsistencias anteriores.
+#         - pd.DataFrame: DataFrame without the inconsistencies above.
 #     """
 #     mask_outlier = (
 #         (df['asignaturas_1sem_evaluadas'] > 30) |
 #         (df['asignaturas_2sem_evaluadas'] > 30))
-    
+
 #     df = df[~mask_outlier].copy()
 
 #     for sem in ['1sem', '2sem']:
@@ -103,23 +103,23 @@ def codificar_objetivo(df: pd.DataFrame, target_col: str = 'objetivo') -> pd.Dat
 
 def limpiar_cualificacion_previa(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agrupa los niveles de cualificación previa en categorías.
+    Groups the prior qualification levels into categories.
 
-    La variable original contiene demasiadas etiquetas con muy pocas instancias.
-    Se mapean a 5 grupos:
-      - superior: títulos universitarios y licenciaturas.
-      - tecnico: títulos técnicos y de especialización.
-      - basica: educación básica.
-      - secundaria: bachillerato y educación secundaria.
-      - otros_incompletos: resto (no clasificados o sin información).
+    The original variable contains too many labels with very few instances.
+    They are mapped to 5 groups:
+      - superior: university degrees.
+      - tecnico: technical and specialisation degrees.
+      - basica: basic education.
+      - secundaria: high school and secondary education.
+      - otros_incompletos: everything else (unclassified or no information).
 
     Args:
-        - df (pd.DataFrame): DataFrame original con la columna
-                             'cualificacion_previa' sin agrupar.
+        - df (pd.DataFrame): original DataFrame with the ungrouped
+                             'cualificacion_previa' column.
 
     Returns
-        - pd.DataFrame: DataFrame con la columna 'cualificacion_previa'
-                        reducida a 5 categorías.
+        - pd.DataFrame: DataFrame with the 'cualificacion_previa' column
+                        reduced to 5 categories.
     """
     df = df.copy()
     CATEGORIAS_FINALES = ['superior', 'tecnico', 'basica', 'secundaria']
@@ -141,21 +141,21 @@ def limpiar_cualificacion_previa(df: pd.DataFrame) -> pd.DataFrame:
 
 def limpiar_modo_solicitud(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Agrupa las vías de acceso a la universidad en categorías principales.
+    Groups the university admission routes into main categories.
 
-    - acceso_ordinario: 1ª y 2ª fase de la selectividad.
-    - movilidad_academica: cambios de carrera y traslados de expediente.
-    - titulados_superior: alumnos que ya poseen un título previo.
-    - mayor_de_23_anos: vía de acceso para mayores de 23 años (alto volumen).
-    - otros
+    - acceso_ordinario: 1st and 2nd phase of the university entrance exam.
+    - movilidad_academica: degree changes and record transfers.
+    - titulados_superior: students who already hold a previous degree.
+    - mayor_de_23_anos: admission route for applicants over 23 (high volume).
+    - otros: others
 
     Args:
-        - df (pd.DataFrame): DataFrame original con la columna
-                             'modo_solicitud' sin agrupar.
+        - df (pd.DataFrame): original DataFrame with the ungrouped
+                             'modo_solicitud' column.
 
     Returns
-        - pd.DataFrame: DataFrame con la columna 'modo_solicitud'
-                        reducida a 5 categorías principales.
+        - pd.DataFrame: DataFrame with the 'modo_solicitud' column
+                        reduced to 5 main categories.
     """
 
     df = df.copy()
@@ -179,21 +179,21 @@ def limpiar_modo_solicitud(df: pd.DataFrame) -> pd.DataFrame:
 
 def limpiar_info_padres(df: pd.DataFrame, min_frecuencia: int = 20) -> pd.DataFrame:
     """
-    Agrupa categorías poco frecuentes en las variables de los padres.
+    Groups infrequent categories in the parents' variables.
 
-    Las columnas de ocupación y cualificación de los padres tienen muchas
-    categorías con muy pocos registros. Aquellas con menos de 'min_frecuencia'
-    instancias se unen en 'otras_categorias' para evitar ruido en el modelo.
+    The parents' occupation and qualification columns have many categories
+    with very few records. Those with fewer than 'min_frecuencia' instances
+    are merged into 'otras_categorias' to avoid noise in the model.
 
     Args:
-        - df (pd.DataFrame): DataFrame original con columnas de ocupación
-                             y cualificación de los padres.
-        - min_frecuencia (int): Umbral mínimo de instancias para conservar
-                                una categoría (default: 20).
+        - df (pd.DataFrame): original DataFrame with the parents' occupation
+                             and qualification columns.
+        - min_frecuencia (int): minimum number of instances required to keep
+                                a category (default: 20).
 
     Returns
-        - pd.DataFrame: DataFrame con categorías poco frecuentes fusionadas
-                        bajo 'otras_categorias'.
+        - pd.DataFrame: DataFrame with infrequent categories merged
+                        under 'otras_categorias'.
     """
     df = df.copy()
     COLS_PADRES = [
@@ -208,15 +208,15 @@ def limpiar_info_padres(df: pd.DataFrame, min_frecuencia: int = 20) -> pd.DataFr
 
 
 
-# Pipeline completo de limpieza
+# Full cleaning pipeline
 
 def limpiar_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Aplica el pipeline completo de limpieza sobre el DataFrame crudo.
+    Applies the full cleaning pipeline to the raw DataFrame.
 
-    Orquesta todas las funciones de limpieza en el orden correcto y
-    devuelve el DataFrame listo para generar los datasets de clasificación
-    y regresión.
+    Orchestrates all the cleaning functions in the correct order and
+    returns the DataFrame ready to generate the classification and
+    regression datasets.
     """
     df = unificar_nulls(df)
     df = codificar_objetivo(df)
@@ -229,26 +229,26 @@ def limpiar_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-# Generación de datasets de salida
+# Output dataset generation
 
-def generar_data_clasificacion(df: pd.DataFrame, output_dir: str = None, 
+def generar_data_clasificacion(df: pd.DataFrame, output_dir: str = None,
                                test_size: float = 0.20, random_state: int = 0,) -> tuple:
     """
-    Genera los datasets de entrenamiento y test para la tarea de clasificación.
+    Generates the training and test datasets for the classification task.
 
-    Se mantienen todas las variables, incluyendo notas 0.0, ya que son un
-    indicador de abandono.
+    All variables are kept, including 0.0 grades, since they are an
+    indicator of dropout.
 
     Split: 80% train / 20% test
 
     Args:
-        - df: DataFrame limpio con 'objetivo'.
-        - output_dir: directorio de salida. Si None, no se guardan CSVs.
-        - test_size: proporción del conjunto de test.
-        - random_state: semilla para reproducibilidad.
+        - df: clean DataFrame with 'objetivo'.
+        - output_dir: output directory. If None, no CSVs are saved.
+        - test_size: proportion of the test set.
+        - random_state: seed for reproducibility.
 
     Returns:
-        - (df_train, df_test): particiones del split 80/20 estratificado.
+        - (df_train, df_test): partitions of the stratified 80/20 split.
     """
     df_train, df_test = train_test_split(
         df, test_size=test_size, random_state=random_state,
@@ -271,22 +271,22 @@ def generar_data_clasificacion(df: pd.DataFrame, output_dir: str = None,
 def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
                            test_size: float = 0.20, random_state: int = 0) -> tuple:
     """
-    Genera los datasets de entrenamiento y test para la tarea de regresión.
+    Generates the training and test datasets for the regression task.
 
-    La variable objetivo es la nota media del 2º semestre.
-      - Para evitar data leakage: se eliminan todas las variables del 2º semestre
-        salvo el propio target, y también 'objetivo'.
-      - Para evitar sesgo por abandono: se excluyen los alumnos con nota 0.0 en
-        1sem y 2sem.
+    The target variable is the average grade of the 2nd semester.
+      - To avoid data leakage: all 2nd-semester variables are dropped except
+        the target itself, as well as 'objetivo'.
+      - To avoid dropout bias: students with a 0.0 grade in both the 1st and
+        2nd semester are excluded.
 
     Args:
-        - df: DataFrame limpio.
-        - output_dir: directorio de salida. Si None, no se guardan CSVs.
-        - test_size: proporción del conjunto de test.
-        - random_state: semilla.
+        - df: clean DataFrame.
+        - output_dir: output directory. If None, no CSVs are saved.
+        - test_size: proportion of the test set.
+        - random_state: seed.
 
     Returns:
-        - (df_train, df_test): particiones del split 80/20.
+        - (df_train, df_test): partitions of the 80/20 split.
     """
     df_reg = df[(df['nota_media_1sem'] != 0.0) & (df['nota_media_2sem'] != 0.0)].copy()
 
@@ -297,7 +297,7 @@ def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
         'asignaturas_2sem_matriculadas',
         'asignaturas_2sem_sin_evaluacion',
         'objetivo']
-    
+
     df_reg = df_reg.drop(columns=vars_leakage)
 
     df_train, df_test = train_test_split(df_reg, test_size=test_size, random_state=random_state)
@@ -307,9 +307,9 @@ def generar_data_regresion(df: pd.DataFrame, output_dir: str = None,
         df_train.to_csv(
             os.path.join(output_dir, 'datos_limpios_regresion_train.csv'),
             index=False, sep=';')
-        
+
         df_test.to_csv(
             os.path.join(output_dir, 'datos_limpios_regresion_test.csv'),
             index=False, sep=';')
-        
+
     return df_train, df_test

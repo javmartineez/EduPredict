@@ -1,9 +1,9 @@
 """
-Tarea 1: Módulo de clasificación multiclase (Abandono / Matriculado / Graduado).
+Task 1: Multiclass classification module (Dropout / Enrolled / Graduate).
 
-Pensado para usarse como librería desde el notebook 02_clasificacion.ipynb.
+Designed to be used as a library from the 02_clasificacion.ipynb notebook.
 
-Modelos incluidos: KNN, Regresión Logística (ElasticNet), Random Forest.
+Included models: KNN, Logistic Regression (ElasticNet), Random Forest.
 """
 
 import os
@@ -29,26 +29,26 @@ from sklearn.metrics import (
 
 
 
-# 1. Carga de datos
+# 1. Data loading
 
 def cargar_datos(path_train: str, path_test: str) -> tuple:
     """
-    Lee los CSVs de entrenamiento y test, aplica un shuffle y separa features del target.
+    Reads the training and test CSVs, shuffles them and splits features from the target.
 
     Args:
-        - path_train (str): ruta al CSV de entrenamiento
-        - path_test (str): ruta al CSV de test
+        - path_train (str): path to the training CSV
+        - path_test (str): path to the test CSV
 
     Returns:
-        - X_train (pd.DataFrame): features de entrenamiento
-        - y_train (pd.Series): etiquetas de entrenamiento
-        - X_test (pd.DataFrame): features de test
-        - y_test (pd.Series): etiquetas de test
+        - X_train (pd.DataFrame): training features
+        - y_train (pd.Series): training labels
+        - X_test (pd.DataFrame): test features
+        - y_test (pd.Series): test labels
     """
 
     train = pd.read_csv(path_train, sep=";")
     test  = pd.read_csv(path_test, sep=";")
-    train = train.sample(frac=1, random_state=0).reset_index(drop=True) #shuffle manual
+    train = train.sample(frac=1, random_state=0).reset_index(drop=True) #manual shuffle
 
     TARGET = "objetivo"
     X_train = train.drop(columns=[TARGET])
@@ -58,18 +58,18 @@ def cargar_datos(path_train: str, path_test: str) -> tuple:
     return X_train, y_train, X_test, y_test
 
 
-# 2. Preprocesador
+# 2. Preprocessor
 
 def construir_preprocesador(X: pd.DataFrame) -> ColumnTransformer:
     """
-    Construye un preprocesador que estandarizar las variables numéricas
-    y codifica (one-hot) las categóricas.
+    Builds a preprocessor that standardises the numerical variables
+    and one-hot encodes the categorical ones.
 
     Args:
-        - X (pd.DataFrame): DataFrame con las features de entrenamiento
+        - X (pd.DataFrame): DataFrame with the training features
 
     Returns:
-        - preprocesador (ColumnTransformer): transformador listo para usar en un Pipeline
+        - preprocesador (ColumnTransformer): transformer ready to be used in a Pipeline
     """
     cols_num = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
     cols_cat = X.select_dtypes(include=["object", "category"]).columns.tolist()
@@ -82,17 +82,17 @@ def construir_preprocesador(X: pd.DataFrame) -> ColumnTransformer:
 
 
 
-# 3. Modelos y grids
+# 3. Models and grids
 
 def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
     """
-    Define los modelos y sus grids de hiperparámetros para la búsqueda con GridSearchCV.
+    Defines the models and their hyperparameter grids for the GridSearchCV search.
 
     Args:
-        - preprocesador (ColumnTransformer): preprocesador a incluir en cada Pipeline
+        - preprocesador (ColumnTransformer): preprocessor to include in each Pipeline
 
     Returns:
-        - modelos (dict): diccionario con formato {nombre: (pipeline, param_grid)}
+        - modelos (dict): dictionary in the format {name: (pipeline, param_grid)}
     """
     modelos = {}
 
@@ -107,7 +107,7 @@ def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
             "clf__weights":     ["uniform", "distance"],
             "clf__metric":      ["euclidean", "manhattan"]})
 
-    # Regresión Logística (ElasticNet)
+    # Logistic Regression (ElasticNet)
     modelos["LogisticRegression"] = (
         Pipeline([
             ("prep", preprocesador),
@@ -143,27 +143,27 @@ def definir_modelos_y_grids(preprocesador: ColumnTransformer) -> dict:
 
 
 
-# 4. Entrenamiento con CV
+# 4. Training with CV
 
 def entrenar_modelos(modelos: dict, X_train: pd.DataFrame, 
                      y_train: pd.Series, verbose: int = 1) -> dict:
     """
-    Entrena cada modelo usando GridSearchCV con validación cruzada estratificada.
+    Trains each model using GridSearchCV with stratified cross-validation.
 
     Args:
-        - modelos (dict): diccionario con formato {nombre: (pipeline, param_grid)}
-        - X_train (pd.DataFrame): features de entrenamiento
-        - y_train (pd.Series): etiquetas de entrenamiento
-        - verbose (int): default = 1 para ir mostrando un mínimo log
+        - modelos (dict): dictionary in the format {name: (pipeline, param_grid)}
+        - X_train (pd.DataFrame): training features
+        - y_train (pd.Series): training labels
+        - verbose (int): default = 1 to show a minimal log
 
     Returns:
-        - resultados (dict): diccionario con formato {nombre: GridSearchCV ajustado}
+        - resultados (dict): dictionary in the format {name: fitted GridSearchCV}
     """
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
     resultados = {}
 
     for nombre, (pipeline, param_grid) in modelos.items():
-        print(f"\n{'-'*60}\n  Entrenando: {nombre}\n{'-'*60}")
+        print(f"\n{'-'*60}\n  Training: {nombre}\n{'-'*60}")
         gs = GridSearchCV(
             estimator=pipeline,
             param_grid=param_grid,
@@ -174,14 +174,14 @@ def entrenar_modelos(modelos: dict, X_train: pd.DataFrame,
             refit=True)
         
         gs.fit(X_train, y_train)
-        print(f"  Mejor F1 macro (CV): {gs.best_score_:.4f}")
-        print(f"  Mejores params:      {gs.best_params_}")
+        print(f"  Best macro F1 (CV): {gs.best_score_:.4f}")
+        print(f"  Best params:        {gs.best_params_}")
         resultados[nombre] = gs
     return resultados
 
 
 
-# 5. Evaluación en test
+# 5. Test evaluation
 
 def evaluar_en_test(
     resultados: dict,
@@ -194,19 +194,19 @@ def evaluar_en_test(
     path_resumen_csv: str = None) -> tuple:
 
     """
-    Evalúa cada modelo en test y devuelve (df_resumen, figs_cm).
+    Evaluates each model on the test set and returns (df_resumen, figs_cm).
 
     Args:
-        - resultados: {nombre: GridSearchCV ajustado}.
-        - X_test, y_test: conjunto de test.
-        - labels: etiquetas numéricas ordenadas ([0, 1, 2]).
-        - nombres_clases: nombres legibles ([ 'abandono', 'matriculado', 'graduado']).
-        - guardar_figs: si True, guarda los PNGs de matrices de confusión.
-        - path_prefix_cm: prefijo de ruta para los PNGs (solo si guardar_figs=True).
-        - path_resumen_csv: ruta del CSV resumen (si None, no se guarda).
+        - resultados: {name: fitted GridSearchCV}.
+        - X_test, y_test: test set.
+        - labels: sorted numerical labels ([0, 1, 2]).
+        - nombres_clases: human-readable names ([ 'abandono', 'matriculado', 'graduado']).
+        - guardar_figs: if True, saves the confusion matrix PNGs.
+        - path_prefix_cm: path prefix for the PNGs (only if guardar_figs=True).
+        - path_resumen_csv: path of the summary CSV (if None, it is not saved).
 
     Returns:
-        - (df_resumen, figs_cm): tabla de métricas y dict {nombre: Figure}.
+        - (df_resumen, figs_cm): metrics table and dict {name: Figure}.
     """
     resumen = []
     figs_cm = {}
@@ -215,7 +215,7 @@ def evaluar_en_test(
         y_pred = gs.predict(X_test)
         f1_mac = f1_score(y_test, y_pred, average="macro")
 
-        print(f"\n{'-'*60}\n  {nombre}  |  F1 macro test = {f1_mac:.4f}\n{'-'*60}")
+        print(f"\n{'-'*60}\n  {nombre}  |  Test macro F1 = {f1_mac:.4f}\n{'-'*60}")
         print(classification_report(y_test, y_pred, target_names=nombres_clases))
 
         resumen.append({
@@ -224,12 +224,12 @@ def evaluar_en_test(
             "f1_macro_test": f1_mac,
             "mejores_params": gs.best_params_})
 
-        # Matriz de confusión
+        # Confusion matrix
         cm = confusion_matrix(y_test, y_pred, labels=labels)
         fig, ax = plt.subplots(figsize=(6, 5))
         ConfusionMatrixDisplay(cm, display_labels=nombres_clases).plot(
             ax=ax, cmap="Blues", values_format="d")
-        ax.set_title(f"Matriz de confusión — {nombre}")
+        ax.set_title(f"Confusion matrix — {nombre}")
         fig.tight_layout()
         plt.close(fig)
         figs_cm[nombre] = fig
@@ -238,7 +238,7 @@ def evaluar_en_test(
             fig.savefig(f"{path_prefix_cm}{nombre}.png", dpi=150)
 
     df_resumen = pd.DataFrame(resumen)
-    print(f"\n{'-'*60}\n RESUMEN COMPARATIVO\n{'-'*60}")
+    print(f"\n{'-'*60}\n COMPARATIVE SUMMARY\n{'-'*60}")
     print(df_resumen.to_string(index=False))
 
     if path_resumen_csv is not None:
@@ -248,20 +248,20 @@ def evaluar_en_test(
 
 
 
-# 6. Importancia de variables (Random Forest)
+# 6. Feature importance (Random Forest)
 
 def importancia_variables(gs_rf: GridSearchCV, top_n: int = 15, path_fig: str = None):
     """
-    Devuelve (df_importancias, fig) de las variables más 
-    importantes según el modelo Random Forest.
+    Returns (df_importancias, fig) with the most 
+    important variables according to the Random Forest model.
 
     Args:
-        - gs_rf: GridSearchCV ajustado con el RF.
-        - top_n: número de variables a mostrar.
-        - path_fig: si se indica, guarda la figura en disco.
+        - gs_rf: GridSearchCV fitted with the RF.
+        - top_n: number of variables to show.
+        - path_fig: if given, saves the figure to disk.
 
     Returns:
-        - (df_importancias, fig): DataFrame ordenado y Figure de matplotlib.
+        - (df_importancias, fig): sorted DataFrame and matplotlib Figure.
     """
     best_model = gs_rf.best_estimator_
     prep = best_model.named_steps["prep"]
@@ -281,7 +281,7 @@ def importancia_variables(gs_rf: GridSearchCV, top_n: int = 15, path_fig: str = 
     ax.barh(df_importancias["variable"][::-1],
             df_importancias["importancia"][::-1],
             color="steelblue")
-    ax.set_xlabel("Importancia (Gini)")
+    ax.set_xlabel("Importance (Gini)")
     ax.set_title(f"Top {top_n} feature importances — Random Forest")
     fig.tight_layout()
 

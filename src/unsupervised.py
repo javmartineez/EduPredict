@@ -1,7 +1,7 @@
 """
-Tarea 3: Aprendizaje no supervisado
-Módulo de funciones para identificar perfiles de estudiantes mediante
-hierarchical clustering aglomerativo.
+Task 3: Unsupervised learning
+Module of functions to identify student profiles through
+agglomerative hierarchical clustering.
 """
 
 import numpy as np
@@ -23,33 +23,33 @@ LINKAGES_DISPONIBLES = ("ward", "average", "complete")
 
 
 
-# 1. Carga de datos
+# 1. Data loading
 
 def cargar_datos_clustering(path_train:str, path_test: str) -> pd.DataFrame:
     """
-    Carga el dataset completo para el clustering, uniendo train y test
+    Loads the full dataset for clustering, joining train and test
 
-    Args: 
-        - path_train (str): Direccion al CSV del dataset de train
-        - path_test (str): Direccion al CSV del dataset de test
-    
-    Returns: 
-        - df (pd.DataFrame): df del dataset
+    Args:
+        - path_train (str): path to the training dataset CSV
+        - path_test (str): path to the test dataset CSV
+
+    Returns:
+        - df (pd.DataFrame): dataset DataFrame
     
     """
     df_train = pd.read_csv(path_train, sep=";")
     df_test = pd.read_csv(path_test, sep=";")
     df = pd.concat([df_train, df_test], axis=0, ignore_index=True)
 
-    print(f"Dataset cargado para clustering: {df.shape[0]} filas x {df.shape[1]} columnas")
-    print(f"Distribución de '{TARGET_COL}':")
+    print(f"Dataset loaded for clustering: {df.shape[0]} rows x {df.shape[1]} columns")
+    print(f"Distribution of '{TARGET_COL}':")
     print(df[TARGET_COL].value_counts().to_string())
 
     return df
 
 
 
-# 2. Construcción de la matriz de features
+# 2. Building the feature matrix
 
 def construir_matriz_features(
     df: pd.DataFrame,
@@ -58,28 +58,28 @@ def construir_matriz_features(
     varianza_pca: float = 0.90
     ) -> tuple[np.ndarray, list[str], ColumnTransformer, PCA | None]:
     """
-    Construye la matriz X para clustering.
+    Builds the X matrix for clustering.
 
-      1. Excluye 'objetivo' (y cualquier otra columna pasada en ' excluir_cols' ).
-      2. Escala las variables numéricas con StandardScaler.
-      3. Codifica las categóricas con OneHotEncoder
-      4. (Opcional) Aplica PCA conservando ' varianza_pca'  de varianza explicada.
-         Es recomendable utlizar PCA en este caso porque al hacer OneHot encoding 
-         tenemos alrededor de 100 dimensiones. Con tan alta dimensión, la distancia euclidea 
-         se vuelve un poco loca (curse of dimensionality).
+      1. Excludes 'objetivo' (and any other column passed in 'excluir_cols').
+      2. Scales the numerical variables with StandardScaler.
+      3. Encodes the categorical ones with OneHotEncoder.
+      4. (Optional) Applies PCA keeping 'varianza_pca' of explained variance.
+         PCA is recommended here because one-hot encoding leaves us with
+         around 100 dimensions. With such high dimensionality, the Euclidean
+         distance becomes unreliable (curse of dimensionality).
 
     Args:
-        - df (pd.DataFrame): dataset completo.
-        - excluir_cols (list[str]): columnas a excluir de la matriz X.
-        - aplicar_pca (bool): si True, aplica PCA tras el preprocesado.
-        - varianza_pca (float): proporción de varianza a conservar (0-1).
+        - df (pd.DataFrame): full dataset.
+        - excluir_cols (list[str]): columns to exclude from the X matrix.
+        - aplicar_pca (bool): if True, applies PCA after preprocessing.
+        - varianza_pca (float): proportion of variance to keep (0-1).
 
     Returns:
-        - X (np.ndarray): matriz numérica lista para clustering.
-        - nombres_features (list[str]): nombres de columnas tras one-hot
-          (antes de PCA, útil para diagnósticos).
-        - preprocesador (ColumnTransformer): transformador ajustado.
-        - pca (PCA | None): objeto PCA ajustado, o None si aplicar_pca=False.
+        - X (np.ndarray): numerical matrix ready for clustering.
+        - nombres_features (list[str]): column names after one-hot
+          (before PCA, useful for diagnostics).
+        - preprocesador (ColumnTransformer): fitted transformer.
+        - pca (PCA | None): fitted PCA object, or None if aplicar_pca=False.
     """
     excluir_cols = list(excluir_cols)
     X_df = df.drop(columns=[c for c in excluir_cols if c in df.columns])
@@ -103,34 +103,34 @@ def construir_matriz_features(
     cat_features = (preprocesador.named_transformers_["cat"].get_feature_names_out(cols_cat).tolist())
     nombres_features = list(cols_num) + cat_features
 
-    print(f"Matriz tras preprocesado: {X.shape[0]} x {X.shape[1]} dimensiones")
-    print(f"  - Numéricas (escaladas):  {len(cols_num)}")
-    print(f"  - Categóricas (OneHot):   {len(cat_features)}")
+    print(f"Matrix after preprocessing: {X.shape[0]} x {X.shape[1]} dimensions")
+    print(f"  - Numerical (scaled):     {len(cols_num)}")
+    print(f"  - Categorical (OneHot):   {len(cat_features)}")
 
     pca = None
     if aplicar_pca:
         pca = PCA(n_components=varianza_pca, random_state=0)
         X = pca.fit_transform(X)
-        print(f"PCA: {X.shape[1]} componentes para conservar el {varianza_pca*100:.0f}% de la varianza")
+        print(f"PCA: {X.shape[1]} components to keep {varianza_pca*100:.0f}% of the variance")
 
     return X, nombres_features, preprocesador, pca
 
 
 
-# 3. Cálculo de matrices de linkage
+# 3. Computing linkage matrices
 
 def calcular_linkages(X:np.ndarray, metodos:tuple[str]=LINKAGES_DISPONIBLES, 
                       metric: str = "euclidean") -> dict[str, np.ndarray]:
     """
-    Calcula la matriz de linkage para varios métodos de clustering jerárquico.
+    Computes the linkage matrix for several hierarchical clustering methods.
 
     Args:
-        - X (np.ndarray): matriz de features (N x p).
-        - metodos (tuple[str]): linkages a calcular.
-        - metric (str): distancia empleada.
+        - X (np.ndarray): feature matrix (N x p).
+        - metodos (tuple[str]): linkages to compute.
+        - metric (str): distance metric used.
 
     Returns:
-        - linkages (dict[str, np.ndarray]): {método: matriz_linkage}.
+        - linkages (dict[str, np.ndarray]): {method: linkage_matrix}.
     """
 
     dist = pdist(X, metric=metric)
@@ -142,27 +142,27 @@ def calcular_linkages(X:np.ndarray, metodos:tuple[str]=LINKAGES_DISPONIBLES,
         else:
             Z = linkage(dist, method=metodo)
         linkages[metodo] = Z
-        print(f"Linkage '{metodo}': matriz de fusiones {Z.shape} calculada")
+        print(f"Linkage '{metodo}': merge matrix {Z.shape} computed")
 
     return linkages
 
 
 
-# 4. Visualización del dendrograma
+# 4. Dendrogram visualisation
 
 def plot_dendrograma(Z: np.ndarray, titulo: str, truncar_a: int=30, color_threshold: float=None, ax: plt.Axes=None) -> plt.Axes:
     """
-    Dibuja un dendrograma a partir de una matriz de linkage.
+    Draws a dendrogram from a linkage matrix.
 
     Args:
-        - Z (np.ndarray): matriz de linkage
-        - truncar_a (int | None): muestra solo las últimos 'truncar_a' ramas del
-                                  dendograma para evitar ver una mancha negra
-        - color_threshold (float | None): altura a la que se colorean los clusters.
-        - ax (plt.Axes | None): eje sobre el que dibujar.
+        - Z (np.ndarray): linkage matrix
+        - truncar_a (int | None): only shows the last 'truncar_a' branches of the
+                                  dendrogram to avoid an unreadable black blob
+        - color_threshold (float | None): height at which clusters are coloured.
+        - ax (plt.Axes | None): axis to draw on.
 
     Returns:
-        - ax (plt.Axes): eje con el dendrograma.
+        - ax (plt.Axes): axis with the dendrogram.
     """
     if ax is None:
         _, ax = plt.subplots(figsize=(11, 5))
@@ -180,35 +180,35 @@ def plot_dendrograma(Z: np.ndarray, titulo: str, truncar_a: int=30, color_thresh
     dendrogram(Z, **kwargs)
 
     ax.set_title(titulo)
-    ax.set_xlabel("Cluster (merges contraídos)" if truncar_a else "Observación")
-    ax.set_ylabel("Distancia de fusión")
+    ax.set_xlabel("Cluster (contracted merges)" if truncar_a else "Observation")
+    ax.set_ylabel("Merge distance")
     if color_threshold is not None:
         ax.axhline(y=color_threshold, color="red", linestyle="--", linewidth=1,
-                   label=f"corte = {color_threshold:.2f}")
+                   label=f"cut = {color_threshold:.2f}")
         ax.legend(loc="upper right")
 
     return ax
 
 
 
-# 5. Selección del número óptimo de clusters
+# 5. Selecting the optimal number of clusters
 
 def seleccionar_k_por_gap(Z:np.ndarray, k_min: int = 2, k_max: int = 10) -> tuple[int, float, pd.DataFrame]:
     """
-    Selecciona k por la regla de mayor gap estudiada.
+    Selects k using the largest-gap rule.
 
     Args:
-        - Z (np.ndarray): matriz de linkage.
-        - k_min (int): mínimo número de clusters a considerar.
-        - k_max (int): máximo número de clusters a considerar.
+        - Z (np.ndarray): linkage matrix.
+        - k_min (int): minimum number of clusters to consider.
+        - k_max (int): maximum number of clusters to consider.
 
     Returns:
-        - k_opt (int): número de clusters sugerido.
-        - threshold (float): distancia de corte que produce k_opt clusters.
-        - tabla (pd.DataFrame): tabla comparativa con todas las k evaluadas
-                                (distancia de fusión, salto absoluto y relativo).
+        - k_opt (int): suggested number of clusters.
+        - threshold (float): cut distance that yields k_opt clusters.
+        - tabla (pd.DataFrame): comparison table with every evaluated k
+                                (merge distance, absolute and relative jump).
     """
-    # Z[:, 2] son las distancias de fusión, ordenadas de menor a mayor.
+    # Z[:, 2] are the merge distances, sorted in ascending order.
     distancias = Z[:, 2]
     n_obs = Z.shape[0] + 1
 
@@ -240,41 +240,41 @@ def seleccionar_k_por_gap(Z:np.ndarray, k_min: int = 2, k_max: int = 10) -> tupl
 
 def plot_saltos(tabla: pd.DataFrame, k_opt: int, ax: plt.Axes | None = None) -> plt.Axes:
     """
-    Visualización de los saltos en el dendograma.
+    Visualises the jumps in the dendrogram.
 
     Args:
-        - tabla (pd.DataFrame): tabla devuelta por seleccionar_k_por_gap.
-        - k_opt (int): k óptimo a destacar.
-        - ax (plt.Axes | None): eje sobre el que dibujar.
+        - tabla (pd.DataFrame): table returned by seleccionar_k_por_gap.
+        - k_opt (int): optimal k to highlight.
+        - ax (plt.Axes | None): axis to draw on.
 
     Returns:
-        - ax (plt.Axes): eje con el gráfico.
+        - ax (plt.Axes): axis with the plot.
     """
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 4))
 
     colores = ["tab:red" if k == k_opt else "steelblue" for k in tabla["k"]]
     ax.bar(tabla["k"].astype(str), tabla["salto_relativo"], color=colores)
-    ax.set_xlabel("Número de clusters k")
-    ax.set_ylabel("Salto relativo en la distancia de fusión")
-    ax.set_title(f"Mayor salto: k óptimo = {k_opt}")
+    ax.set_xlabel("Number of clusters k")
+    ax.set_ylabel("Relative jump in merge distance")
+    ax.set_title(f"Largest jump: optimal k = {k_opt}")
 
     return ax
 
 
 
-# 6. Ajuste final de clusters
+# 6. Final cluster assignment
 
 def ajustar_clusters(Z: np.ndarray, k: int) -> np.ndarray:
     """
-    Asigna cada observación a un cluster cortando el dendrograma para obtener k.
+    Assigns each observation to a cluster by cutting the dendrogram to obtain k.
 
     Args:
-        - Z (np.ndarray): matriz de linkage.
-        - k (int): nº de clusters deseado.
+        - Z (np.ndarray): linkage matrix.
+        - k (int): desired number of clusters.
 
     Returns:
-        - labels (np.ndarray): vector con la etiqueta (1..k) de cada observación.
+        - labels (np.ndarray): vector with the label (1..k) of each observation.
     """
     labels = fcluster(Z, t=k, criterion="maxclust")
     return labels
@@ -282,41 +282,41 @@ def ajustar_clusters(Z: np.ndarray, k: int) -> np.ndarray:
 
 def evaluar_silueta(X: np.ndarray, labels: np.ndarray, sample_size:int=2000) -> float:
     """
-    Calcula el coeficiente silhouette del clustering.
+    Computes the silhouette coefficient of the clustering.
 
-    Notas:
-      - Aunque la elección de k se hace por el salto del dendrograma,
-        reportar también silhouette es una buena práctica.
-      - Para N grande, usamos un subsample (sample_size) por velocidad:
-        silhouette es O(N²) en memoria.
+    Notes:
+      - Although k is chosen by the dendrogram jump, also reporting
+        the silhouette is good practice.
+      - For large N, a subsample (sample_size) is used for speed:
+        silhouette is O(N²) in memory.
 
     Args:
-        - X (np.ndarray): matriz de features.
-        - labels (np.ndarray): etiquetas de cluster.
-        - sample_size (int | None): tamaño de muestra (None = todo).
+        - X (np.ndarray): feature matrix.
+        - labels (np.ndarray): cluster labels.
+        - sample_size (int | None): sample size (None = all).
 
     Returns:
-        - score (float): coeficiente silhouette en [-1, 1].
+        - score (float): silhouette coefficient in [-1, 1].
     """
     return silhouette_score(X, labels, sample_size=sample_size, random_state=0)
 
 
 
-# 7. Perfilado interpretativo de clusters
+# 7. Interpretive cluster profiling
 
 def perfilar_clusters( df: pd.DataFrame, labels: np.ndarray,
                       cols_resumen_num: list[str] = None, cols_resumen_cat: list[str] = None) -> dict[str, pd.DataFrame]:
     """
-    Construye tablas resumen para interpretar cada cluster.
+    Builds summary tables to interpret each cluster.
 
     Args:
-        - df (pd.DataFrame): dataset original con la columna 'objetivo'.
-        - labels (np.ndarray): etiquetas de cluster.
-        - cols_resumen_num (list[str]): columnas numéricas a resumir.
-        - cols_resumen_cat (list[str]): columnas categóricas a resumir.
+        - df (pd.DataFrame): original dataset with the 'objetivo' column.
+        - labels (np.ndarray): cluster labels.
+        - cols_resumen_num (list[str]): numerical columns to summarise.
+        - cols_resumen_cat (list[str]): categorical columns to summarise.
 
     Returns:
-        - perfiles (dict[str, pd.DataFrame]): tablas con los nombres
+        - perfiles (dict[str, pd.DataFrame]): tables named
           'tamaños', 'medias_num', 'modas_cat', 'cluster_x_objetivo'.
     """
     if cols_resumen_num is None:
@@ -341,7 +341,7 @@ def perfilar_clusters( df: pd.DataFrame, labels: np.ndarray,
     df = df.copy()
     df["cluster"] = labels
 
-    # 1) Tamaños
+    # 1) Sizes
     tamaños = (
         df["cluster"]
         .value_counts()
@@ -381,25 +381,25 @@ def evaluar_estabilidad_bootstrap(
     random_state: int = 0,
 ) -> dict[str, float]:
     """
-    Evalúa la estabilidad del clustering por bootstrap subsample.
+    Evaluates clustering stability through bootstrap subsampling.
 
-    Procedimiento:
-      Para cada iteración i:
-        1. Submuestrear el `sample_frac` del dataset.
-        2. Reajustar el clustering jerárquico con el mismo método y k.
-        3. Comparar con el clustering original sobre la intersección de
-           observaciones, usando el Adjusted Rand Index (ARI).
+    Procedure:
+      For each iteration i:
+        1. Subsample `sample_frac` of the dataset.
+        2. Refit the hierarchical clustering with the same method and k.
+        3. Compare with the original clustering on the intersection of
+           observations, using the Adjusted Rand Index (ARI).
 
-    Un ARI medio cercano a 1 indica clusters muy estables; cercano a 0,
-    aleatorios.
+    A mean ARI close to 1 indicates very stable clusters; close to 0,
+    random ones.
 
     Args:
-        - X (np.ndarray): matriz de features.
-        - metodo (str): linkage a usar.
-        - k (int): nº de clusters.
-        - n_iter (int): nº de iteraciones bootstrap.
-        - sample_frac (float): fracción a submuestrear en cada iteración.
-        - random_state (int): semilla.
+        - X (np.ndarray): feature matrix.
+        - metodo (str): linkage to use.
+        - k (int): number of clusters.
+        - n_iter (int): number of bootstrap iterations.
+        - sample_frac (float): fraction to subsample in each iteration.
+        - random_state (int): seed.
 
     Returns:
         - resultados (dict[str, float]): {'ari_medio', 'ari_std', 'n_iter'}.
@@ -409,7 +409,7 @@ def evaluar_estabilidad_bootstrap(
     rng = np.random.default_rng(random_state)
     n = X.shape[0]
 
-    # Clustering de referencia con todo X
+    # Reference clustering on the full X
     if metodo == "ward":
         Z_ref = linkage(X, method="ward")
     else:
